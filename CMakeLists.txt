@@ -1,13 +1,13 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(Misstortion VERSION 1.3.1)
+project(MisstortionAIPowered VERSION 1.3.1)
 
 set(JUCE_DIR "$ENV{USERPROFILE}/Desktop/JUCE" CACHE PATH "Path to JUCE")
 add_subdirectory("${JUCE_DIR}" "${CMAKE_BINARY_DIR}/JUCE")
 
 juce_add_plugin(Misstortion
     COMPANY_NAME "Nimble Tools"
-    BUNDLE_ID "tools.nimble.Misstortion"
+    BUNDLE_ID "tools.nimble.MisstortionAIPowered"
     IS_SYNTH FALSE
     NEEDS_MIDI_INPUT FALSE
     NEEDS_MIDI_OUTPUT FALSE
@@ -17,7 +17,7 @@ juce_add_plugin(Misstortion
     PLUGIN_MANUFACTURER_CODE Manu
     PLUGIN_CODE Orqg
     FORMATS VST3 Standalone
-    PRODUCT_NAME "Misstortion")
+    PRODUCT_NAME "Misstortion AI Powered")
 
 juce_generate_juce_header(Misstortion)
 

@@ -1,9 +1,9 @@
-# Misstortion [![Discord](https://img.shields.io/discord/413798349188104202.svg)](https://discord.gg/HQMuMC4)
+# Misstortion AI Powered [![Discord](https://img.shields.io/discord/413798349188104202.svg)](https://discord.gg/HQMuMC4)
 
 Distortion plugin for VST-based hosts. Does its best to be like Logic's Clip Distortion, which makes it very useful for the hardstyle genre.
 
 Download the AI-powered Windows VST3 build from this repo:
-[Misstortion-v1.3.1-windows-vst3.zip](Dist/Misstortion-v1.3.1-windows-vst3.zip).
+[Misstortion-AI-Powered-v1.3.1-windows-vst3.zip](Dist/Misstortion-AI-Powered-v1.3.1-windows-vst3.zip).
 
 The original prebuilt binaries are also available [on the Itch.io page](https://nimble.itch.io/misstortion).
 
