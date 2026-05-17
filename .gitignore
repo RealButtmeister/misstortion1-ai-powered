@@ -1,5 +1,6 @@
 # Binary builds
 Builds/
+build/
 
 # Automatically generated code
 JuceLibraryCode/

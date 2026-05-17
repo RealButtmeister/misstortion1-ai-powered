@@ -2,7 +2,10 @@
 
 Distortion plugin for VST-based hosts. Does its best to be like Logic's Clip Distortion, which makes it very useful for the hardstyle genre.
 
-Download prebuilt binaries [on the Itch.io page](https://nimble.itch.io/misstortion).
+Download the AI-powered Windows VST3 build from this repo:
+[Misstortion-v1.3.1-windows-vst3.zip](Dist/Misstortion-v1.3.1-windows-vst3.zip).
+
+The original prebuilt binaries are also available [on the Itch.io page](https://nimble.itch.io/misstortion).
 
 * **Hard clip**: Simple hard clip distortion.
 * **Soft clip**: Hyperbolic soft clip distortion.
