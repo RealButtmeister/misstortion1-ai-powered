@@ -13,6 +13,8 @@
 
 #include "Utils.h"
 
+#include <cmath>
+
 
 //==============================================================================
 MisstortionAudioProcessor::MisstortionAudioProcessor()
@@ -37,6 +39,8 @@ MisstortionAudioProcessor::MisstortionAudioProcessor()
 	addParameter(m_paramToneLP = new AudioParameterInt("tonepost", "Tone Post", 1, 20000, 20000));
 	addParameter(m_paramSymmetry = new AudioParameterFloat("symmetry", "Symmetry", NormalisableRange<float>(0.0f, 100.0f), 50.0f));
 	addParameter(m_paramFilterMode = new AudioParameterInt("filtermode", "Filter Mode", 0, 2, 0));
+
+	m_genreText = "hard style";
 }
 
 MisstortionAudioProcessor::~MisstortionAudioProcessor()
@@ -152,6 +156,7 @@ void MisstortionAudioProcessor::processBlock(AudioSampleBuffer& buffer, MidiBuff
 	ScopedNoDenormals noDenormals;
 	const int totalNumInputChannels = getTotalNumInputChannels();
 	const int totalNumOutputChannels = getTotalNumOutputChannels();
+	const int sourceChannels = Min(2, totalNumInputChannels);
 
 	for (int i = totalNumInputChannels; i < totalNumOutputChannels; i++) {
 		buffer.clear(i, 0, buffer.getNumSamples());
@@ -159,6 +164,47 @@ void MisstortionAudioProcessor::processBlock(AudioSampleBuffer& buffer, MidiBuff
 
 	double sampleRate = getSampleRate();
 	int numSamples = buffer.getNumSamples();
+
+	if (sourceChannels > 0 && numSamples > 0) {
+		float peak = 0.0f;
+		double sumSquares = 0.0;
+		double sumAbs = 0.0;
+		double sumDelta = 0.0;
+		int countedSamples = 0;
+
+		for (int channel = 0; channel < sourceChannels; ++channel) {
+			const float* channelData = buffer.getReadPointer(channel);
+			float previous = channelData[0];
+
+			for (int i = 0; i < numSamples; i++) {
+				const float sample = channelData[i];
+				const float absSample = std::abs(sample);
+
+				peak = jmax(peak, absSample);
+				sumSquares += sample * sample;
+				sumAbs += absSample;
+
+				if (i > 0) {
+					sumDelta += std::abs(sample - previous);
+				}
+
+				previous = sample;
+				countedSamples++;
+			}
+		}
+
+		if (countedSamples > 0) {
+			const float rms = std::sqrt((float)(sumSquares / countedSamples));
+			const float activity = jlimit(0.0f, 1.0f, (float)(sumAbs / countedSamples) * 4.0f);
+			const float brightness = jlimit(0.0f, 1.0f, (float)(sumDelta / countedSamples) * 12.0f);
+			const float smoothing = 0.08f;
+
+			m_signalRms.store(Lerp(m_signalRms.load(), rms, smoothing));
+			m_signalPeak.store(Lerp(m_signalPeak.load(), peak, smoothing));
+			m_signalActivity.store(Lerp(m_signalActivity.load(), activity, smoothing));
+			m_signalBrightness.store(Lerp(m_signalBrightness.load(), brightness, smoothing));
+		}
+	}
 
 	float mix = (*m_paramMix / 100.0f);
 	float gainIn = Decibels::decibelsToGain((float)*m_paramGainIn, -50.0f);
@@ -263,6 +309,63 @@ void MisstortionAudioProcessor::processBlock(AudioSampleBuffer& buffer, MidiBuff
 	buffer.applyGain(gainOut);
 }
 
+void MisstortionAudioProcessor::applyGenreSettings(const String& genre)
+{
+	m_genreText = genre.trim().isNotEmpty() ? genre.trim() : "hard style";
+	const String cleanGenre = m_genreText.toLowerCase();
+
+	float intensity = jlimit(0.0f, 1.0f, (m_signalRms.load() * 3.0f) + (m_signalPeak.load() * 0.7f) + (m_signalActivity.load() * 0.35f));
+	float brightness = jlimit(0.0f, 1.0f, m_signalBrightness.load());
+
+	float mix = 58.0f + intensity * 24.0f;
+	float gainIn = -4.0f + intensity * 8.0f;
+	float gainOut = -5.0f - intensity * 5.0f;
+	float driveHard = 10.0f + intensity * 18.0f;
+	float driveSoft = 14.0f + intensity * 16.0f;
+	int toneHP = 24 + (int)(brightness * 80.0f);
+	int toneLP = 9800 + (int)(brightness * 5200.0f);
+	float symmetry = 48.0f + intensity * 8.0f;
+	int filterMode = 2;
+
+	if (cleanGenre.contains("hardstyle") || cleanGenre.contains("hard style")) {
+		mix = 66.0f + intensity * 24.0f;
+		gainIn = -2.0f + intensity * 9.0f;
+		gainOut = -7.0f - intensity * 6.0f;
+		driveHard = 18.0f + intensity * 20.0f;
+		driveSoft = 21.0f + intensity * 18.0f;
+		toneHP = 35 + (int)(brightness * 115.0f);
+		toneLP = 8400 + (int)(brightness * 4600.0f);
+		symmetry = 52.0f + intensity * 10.0f;
+		filterMode = 2;
+	} else if (cleanGenre.contains("techno")) {
+		mix = 58.0f + intensity * 18.0f;
+		driveHard = 12.0f + intensity * 18.0f;
+		driveSoft = 18.0f + intensity * 14.0f;
+		toneHP = 55 + (int)(brightness * 140.0f);
+		toneLP = 7800 + (int)(brightness * 4200.0f);
+		symmetry = 50.0f;
+	} else if (cleanGenre.contains("trap") || cleanGenre.contains("hip hop")) {
+		mix = 48.0f + intensity * 18.0f;
+		gainOut = -4.0f - intensity * 4.0f;
+		driveHard = 7.0f + intensity * 14.0f;
+		driveSoft = 16.0f + intensity * 18.0f;
+		toneHP = 20 + (int)(brightness * 60.0f);
+		toneLP = 10500 + (int)(brightness * 5200.0f);
+		symmetry = 46.0f + intensity * 6.0f;
+		filterMode = 1;
+	}
+
+	*m_paramMix = jlimit(0.0f, 100.0f, mix);
+	*m_paramGainIn = jlimit(-50.0f, 50.0f, gainIn);
+	*m_paramGainOut = jlimit(-50.0f, 50.0f, gainOut);
+	*m_paramDriveHard = jlimit(0.0f, 50.0f, driveHard);
+	*m_paramDriveSoft = jlimit(0.0f, 50.0f, driveSoft);
+	*m_paramToneHP = jlimit(0, 20000, toneHP);
+	*m_paramToneLP = jlimit(1, 20000, toneLP);
+	*m_paramSymmetry = jlimit(0.0f, 100.0f, symmetry);
+	*m_paramFilterMode = jlimit(0, 2, filterMode);
+}
+
 //==============================================================================
 bool MisstortionAudioProcessor::hasEditor() const
 {
@@ -294,6 +397,7 @@ void MisstortionAudioProcessor::getStateInformation(MemoryBlock& destData)
 	xmlSettings->setAttribute("tonepost", *m_paramToneLP);
 	xmlSettings->setAttribute("symmetry", *m_paramSymmetry);
 	xmlSettings->setAttribute("filtermode", *m_paramFilterMode);
+	xmlSettings->setAttribute("genre", m_genreText);
 	xml->addChildElement(xmlSettings);
 
 	copyXmlToBinary(*xml, destData);
@@ -322,6 +426,7 @@ void MisstortionAudioProcessor::setStateInformation(const void* data, int sizeIn
 		*m_paramToneLP = xmlSettings->getIntAttribute("tonepost");
 		*m_paramSymmetry = (float)xmlSettings->getDoubleAttribute("symmetry");
 		*m_paramFilterMode = (int)xmlSettings->getIntAttribute("filtermode");
+		m_genreText = xmlSettings->getStringAttribute("genre", "hard style");
 	}
 
 #if defined(_DEBUG)

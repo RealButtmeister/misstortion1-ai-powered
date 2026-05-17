@@ -19,7 +19,7 @@ MisstortionAudioProcessorEditor::MisstortionAudioProcessorEditor(MisstortionAudi
 {
 	m_backgroundImage = ImageCache::getFromMemory(BinaryData::Misstortion_png, BinaryData::Misstortion_pngSize);
 
-	setSize(m_backgroundImage.getWidth() * 2, m_backgroundImage.getHeight() * 2);
+	setSize((m_backgroundImage.getWidth() * 2) + 150, m_backgroundImage.getHeight() * 2);
 
 	InitializeSlider(m_sliderMix, Slider::LinearBar, processor.m_paramMix, "%");
 	InitializeSlider(m_sliderGainIn, Slider::LinearBar, processor.m_paramGainIn, " dB");
@@ -49,6 +49,29 @@ MisstortionAudioProcessorEditor::MisstortionAudioProcessorEditor(MisstortionAudi
 	m_buttonFilterMode12db.setTooltip("12dB/octave");
 	addAndMakeVisible(m_buttonFilterMode12db);
 
+	m_labelGenre.setText("Genre", dontSendNotification);
+	m_labelGenre.setColour(Label::textColourId, Colour(0xFFE6E6E6));
+	m_labelGenre.setJustificationType(Justification::centredLeft);
+	addAndMakeVisible(m_labelGenre);
+
+	m_textGenre.setText(processor.m_genreText);
+	m_textGenre.setColour(TextEditor::backgroundColourId, Colour(0xFF101516));
+	m_textGenre.setColour(TextEditor::textColourId, Colour(0xFFFFFFFF));
+	m_textGenre.setColour(TextEditor::outlineColourId, Colour(0xFF3B4A4D));
+	m_textGenre.setColour(TextEditor::focusedOutlineColourId, Colour(0xFF8BAFB5));
+	m_textGenre.setColour(TextEditor::highlightColourId, Colour(0x88472E2E));
+	m_textGenre.setSelectAllWhenFocused(true);
+	m_textGenre.setTooltip("Genre target for generated distortion settings");
+	addAndMakeVisible(m_textGenre);
+
+	m_buttonGenerate.setButtonText("Generate");
+	m_buttonGenerate.setColour(TextButton::buttonColourId, Colour(0xFF472E2E));
+	m_buttonGenerate.setColour(TextButton::buttonOnColourId, Colour(0xFF5A3838));
+	m_buttonGenerate.setColour(TextButton::textColourOffId, Colour(0xFFFFFFFF));
+	m_buttonGenerate.setTooltip("Analyze the incoming signal and apply genre-based distortion settings");
+	m_buttonGenerate.addListener(this);
+	addAndMakeVisible(m_buttonGenerate);
+
 #if DEBUG
 	m_labelDebug.setColour(Label::backgroundColourId, Colour(0x7FFF00FF));
 	m_labelDebug.setColour(Label::textColourId, Colour(0xFFFFFFFF));
@@ -60,6 +83,7 @@ MisstortionAudioProcessorEditor::MisstortionAudioProcessorEditor(MisstortionAudi
 
 MisstortionAudioProcessorEditor::~MisstortionAudioProcessorEditor()
 {
+	m_buttonGenerate.removeListener(this);
 }
 
 void MisstortionAudioProcessorEditor::InitializeSlider(Slider &slider, Slider::SliderStyle style, AudioParameterFloat* param, String suffix)
@@ -142,6 +166,14 @@ void MisstortionAudioProcessorEditor::paint(Graphics& g)
 	paintFilterButton(m_buttonFilterMode12db, g);
 
 	g.drawImage(m_backgroundImage, 0, 0, width * 2, height * 2, 0, 0, width, height);
+
+	Rectangle<int> sidePanel(width * 2, 0, getWidth() - (width * 2), getHeight());
+	g.setColour(Colour(0xFF141B1C));
+	g.fillRect(sidePanel);
+	g.setColour(Colour(0xFF2C383A));
+	g.drawRect(sidePanel);
+	g.setColour(Colour(0xFF263234));
+	g.drawLine((float)sidePanel.getX(), 0.0f, (float)sidePanel.getX(), (float)getHeight(), 2.0f);
 }
 
 void MisstortionAudioProcessorEditor::resized()
@@ -159,6 +191,11 @@ void MisstortionAudioProcessorEditor::resized()
 	setControlBounds(m_buttonFilterModeLegacy, 102, 110, 11, 9);
 	setControlBounds(m_buttonFilterMode6db, 102, 120, 11, 9);
 	setControlBounds(m_buttonFilterMode12db, 102, 130, 11, 9);
+
+	int panelX = m_backgroundImage.getWidth() * 2;
+	m_labelGenre.setBounds(panelX + 14, 26, 122, 18);
+	m_textGenre.setBounds(panelX + 14, 48, 122, 24);
+	m_buttonGenerate.setBounds(panelX + 14, 82, 122, 28);
 
 #if DEBUG
 	m_labelDebug.setBounds(0, 0, 101 * 2, 50);
@@ -202,6 +239,13 @@ void MisstortionAudioProcessorEditor::sliderValueChanged(Slider* slider)
 	setSliderParam(slider, m_sliderSymmetry, processor.m_paramSymmetry);
 }
 
+void MisstortionAudioProcessorEditor::buttonClicked(Button* button)
+{
+	if (button == &m_buttonGenerate) {
+		processor.applyGenreSettings(m_textGenre.getText());
+	}
+}
+
 void MisstortionAudioProcessorEditor::timerCallback()
 {
 	m_sliderMix.setValue(*processor.m_paramMix, dontSendNotification);
@@ -218,6 +262,10 @@ void MisstortionAudioProcessorEditor::timerCallback()
 	m_buttonFilterModeLegacy.setToggleState(filterMode == 0, dontSendNotification);
 	m_buttonFilterMode6db.setToggleState(filterMode == 1, dontSendNotification);
 	m_buttonFilterMode12db.setToggleState(filterMode == 2, dontSendNotification);
+
+	if (!m_textGenre.hasKeyboardFocus(false) && m_textGenre.getText() != processor.m_genreText) {
+		m_textGenre.setText(processor.m_genreText, false);
+	}
 
 #if DEBUG
 	m_labelDebug.setText("[DEBUG] " + processor.m_debugText, dontSendNotification);

@@ -12,6 +12,7 @@
 
 #include "../JuceLibraryCode/JuceHeader.h"
 #include <juce_dsp/juce_dsp.h>
+#include <atomic>
 
 
 //==============================================================================
@@ -30,6 +31,8 @@ public:
 	AudioParameterInt* m_paramToneLP;
 	AudioParameterFloat* m_paramSymmetry;
 	AudioParameterInt* m_paramFilterMode;
+
+	String m_genreText;
 
 	typedef dsp::ProcessorDuplicator<
 		dsp::IIR::Filter<float>,
@@ -61,6 +64,7 @@ public:
 #endif
 
 	void processBlock(AudioSampleBuffer&, MidiBuffer&) override;
+	void applyGenreSettings(const String& genre);
 
 	//==============================================================================
 	AudioProcessorEditor* createEditor() override;
@@ -86,6 +90,11 @@ public:
 	void setStateInformation(const void* data, int sizeInBytes) override;
 
 private:
+	std::atomic<float> m_signalRms { 0.0f };
+	std::atomic<float> m_signalPeak { 0.0f };
+	std::atomic<float> m_signalBrightness { 0.0f };
+	std::atomic<float> m_signalActivity { 0.0f };
+
 	//==============================================================================
 	JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MisstortionAudioProcessor)
 };

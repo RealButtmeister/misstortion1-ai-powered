@@ -21,6 +21,7 @@
 */
 class MisstortionAudioProcessorEditor : public AudioProcessorEditor,
 	private Slider::Listener,
+	private Button::Listener,
 	private Timer
 {
 public:
@@ -59,6 +60,10 @@ private:
 	ToggleButton m_buttonFilterMode6db;
 	ToggleButton m_buttonFilterMode12db;
 
+	Label m_labelGenre;
+	TextEditor m_textGenre;
+	TextButton m_buttonGenerate;
+
 #if DEBUG
 	Label m_labelDebug;
 #endif
@@ -67,6 +72,7 @@ private:
 	void setSliderParam(Slider* sliderChanged, Slider &actualSlider, AudioParameterFloat* param);
 	void setSliderParam(Slider* sliderChanged, Slider &actualSlider, AudioParameterInt* param);
 	void sliderValueChanged(Slider* slider) override;
+	void buttonClicked(Button* button) override;
 	void setFilterMode(int newMode);
 	virtual void timerCallback() override;
 
